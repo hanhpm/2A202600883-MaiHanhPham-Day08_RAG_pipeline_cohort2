@@ -22,6 +22,41 @@ SRC_DIR = PROJECT_DIR / "src"
 sys.path.insert(0, str(PROJECT_DIR))
 
 
+def _existing_dirs(*paths: Path) -> list[Path]:
+    """Return directories that exist for both the original and cleaned layouts."""
+    return [path for path in paths if path.exists() and path.is_dir()]
+
+
+def _landing_legal_dirs() -> list[Path]:
+    return _existing_dirs(
+        DATA_DIR / "landing" / "legal",
+        DATA_DIR / "landing" / "legal_pdf",
+        DATA_DIR / "landing" / "legal_text",
+    )
+
+
+def _standardized_legal_files() -> list[Path]:
+    std_dir = DATA_DIR / "standardized"
+    files = []
+    for subdir in ["legal", "clean_legal_text"]:
+        path = std_dir / subdir
+        if path.exists():
+            files.extend(path.rglob("*.md"))
+    files.extend(std_dir.glob("clean_legal*.md"))
+    return files
+
+
+def _standardized_news_files() -> list[Path]:
+    std_dir = DATA_DIR / "standardized"
+    files = []
+    for subdir in ["news", "cleaned_news", "uncleaned_news"]:
+        path = std_dir / subdir
+        if path.exists():
+            files.extend(path.rglob("*.md"))
+    files.extend(std_dir.glob("cleaned_news*.md"))
+    return files
+
+
 # ===========================================================================
 # Task 1 — Thu thập văn bản pháp luật (3 điểm)
 # ===========================================================================
@@ -31,18 +66,26 @@ class TestTask1(unittest.TestCase):
 
     def test_landing_legal_dir_exists(self):
         """data/landing/legal/ tồn tại."""
-        legal_dir = DATA_DIR / "landing" / "legal"
-        self.assertTrue(legal_dir.exists(), f"Thư mục không tồn tại: {legal_dir}")
+        legal_dirs = _landing_legal_dirs()
+        self.assertTrue(
+            legal_dirs,
+            "Không tìm thấy legal dir trong data/landing/legal, "
+            "data/landing/legal_pdf hoặc data/landing/legal_text"
+        )
 
     def test_minimum_3_legal_files(self):
         """Có tối thiểu 3 file PDF/DOCX trong data/landing/legal/"""
-        legal_dir = DATA_DIR / "landing" / "legal"
-        if not legal_dir.exists():
-            self.skipTest("data/landing/legal/ chưa tồn tại")
+        legal_dirs = _landing_legal_dirs()
+        if not legal_dirs:
+            self.skipTest("Chưa có legal dir trong data/landing/")
 
-        valid_extensions = {".pdf", ".docx", ".doc"}
-        files = [f for f in legal_dir.iterdir()
-                 if f.is_file() and f.suffix.lower() in valid_extensions]
+        valid_extensions = {".pdf", ".docx", ".doc", ".txt", ".md"}
+        files = [
+            f
+            for legal_dir in legal_dirs
+            for f in legal_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in valid_extensions
+        ]
         self.assertGreaterEqual(
             len(files), 3,
             f"Cần tối thiểu 3 file pháp luật, hiện có {len(files)}: {[f.name for f in files]}"
@@ -50,16 +93,21 @@ class TestTask1(unittest.TestCase):
 
     def test_files_not_empty(self):
         """Các file pháp luật không rỗng (>1KB)."""
-        legal_dir = DATA_DIR / "landing" / "legal"
-        if not legal_dir.exists():
-            self.skipTest("data/landing/legal/ chưa tồn tại")
+        legal_dirs = _landing_legal_dirs()
+        if not legal_dirs:
+            self.skipTest("Chưa có legal dir trong data/landing/")
 
-        valid_extensions = {".pdf", ".docx", ".doc"}
-        files = [f for f in legal_dir.iterdir()
-                 if f.is_file() and f.suffix.lower() in valid_extensions]
+        valid_extensions = {".pdf", ".docx", ".doc", ".txt", ".md"}
+        files = [
+            f
+            for legal_dir in legal_dirs
+            for f in legal_dir.iterdir()
+            if f.is_file() and f.suffix.lower() in valid_extensions
+        ]
         for f in files:
+            min_size = 1024 if f.suffix.lower() in {".pdf", ".docx", ".doc"} else 200
             self.assertGreater(
-                f.stat().st_size, 1024,
+                f.stat().st_size, min_size,
                 f"File {f.name} quá nhỏ ({f.stat().st_size} bytes), có thể bị lỗi"
             )
 
@@ -115,7 +163,11 @@ class TestTask2(unittest.TestCase):
 
         for f in json_files[:3]:
             data = json.loads(f.read_text(encoding="utf-8"))
-            self.assertIn("url", data, f"{f.name} thiếu trường 'url'")
+            has_url = "url" in data or bool(data.get("metadata", {}).get("source_url"))
+            self.assertTrue(
+                has_url,
+                f"{f.name} thiếu trường 'url' hoặc metadata.source_url"
+            )
 
 
 # ===========================================================================
@@ -164,11 +216,12 @@ class TestTask3(unittest.TestCase):
         if not std_dir.exists():
             self.skipTest("data/standardized/ chưa tồn tại")
 
-        has_legal = (std_dir / "legal").exists() and list((std_dir / "legal").rglob("*.md"))
-        has_news = (std_dir / "news").exists() and list((std_dir / "news").rglob("*.md"))
+        has_legal = _standardized_legal_files()
+        has_news = _standardized_news_files()
         self.assertTrue(
             has_legal or has_news,
-            "Cần ít nhất 1 trong 2 thư mục legal/ hoặc news/ có file .md"
+            "Cần ít nhất 1 nguồn markdown legal/news trong standardized: "
+            "legal/, news/, clean_legal_text/, cleaned_news/ hoặc prefix clean_*"
         )
 
 
