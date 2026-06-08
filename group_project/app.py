@@ -20,7 +20,24 @@ st.markdown(
     :root { color-scheme: light; }
     .stApp { background: #ffffff; color: #111111; }
     [data-testid="stSidebar"] { background: #0f0f0f; color: #ffffff; }
-    [data-testid="stSidebar"] * { color: #ffffff !important; }
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span { color: #ffffff; }
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] textarea,
+    [data-testid="stSidebar"] select,
+    [data-testid="stSidebar"] [role="combobox"],
+    [data-testid="stSidebar"] [data-baseweb="select"] *,
+    [data-testid="stSidebar"] [data-baseweb="popover"] * {
+        color: #111111 !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background: #ffffff !important;
+        border-color: #ffffff !important;
+    }
     .result-box {
         border: 1px solid #111;
         border-radius: 6px;
