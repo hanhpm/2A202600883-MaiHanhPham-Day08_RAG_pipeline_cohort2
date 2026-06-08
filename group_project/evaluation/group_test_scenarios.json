@@ -1,0 +1,38 @@
+[
+  {
+    "id": "legal_storage_penalty",
+    "question": "Hình phạt cho tội tàng trữ trái phép chất ma túy là gì?",
+    "expected_keywords": ["ma túy", "tàng trữ", "hình phạt"],
+    "expected_source_hint": "hinh"
+  },
+  {
+    "id": "drug_prevention_law",
+    "question": "Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?",
+    "expected_keywords": ["nghiêm cấm", "ma túy", "2021"],
+    "expected_source_hint": "luat-phong-chong-ma-tuy"
+  },
+  {
+    "id": "compulsory_rehab",
+    "question": "Cai nghiện ma túy bắt buộc được quy định như thế nào?",
+    "expected_keywords": ["cai nghiện", "bắt buộc", "ma túy"],
+    "expected_source_hint": "cai-nghien"
+  },
+  {
+    "id": "artist_news",
+    "question": "Nghệ sĩ nào bị điều tra liên quan đến ma túy?",
+    "expected_keywords": ["nghệ sĩ", "ma túy", "điều tra"],
+    "expected_source_hint": "news"
+  },
+  {
+    "id": "chi_dan_news",
+    "question": "Chi Dân liên quan đến vụ việc ma túy như thế nào?",
+    "expected_keywords": ["Chi Dân", "ma túy", "điều tra"],
+    "expected_source_hint": "chi-dan"
+  },
+  {
+    "id": "substance_list",
+    "question": "Danh mục chất ma túy và tiền chất được sửa đổi trong nghị định nào?",
+    "expected_keywords": ["danh mục", "tiền chất", "nghị định"],
+    "expected_source_hint": "danh-muc"
+  }
+]

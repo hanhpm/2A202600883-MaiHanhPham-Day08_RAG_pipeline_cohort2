@@ -1,0 +1,14 @@
+timestamp,query,top_k,rerank_method,mode,elapsed_ms,top_source,top_score
+2026-06-08T09:33:47.905076+00:00,Hình phạt cho tội tàng trữ trái phép chất ma túy là gì?,5,cross_encoder,search,38427.16,2023-le-hang-dantri.md,0.5554687500000001
+2026-06-08T09:33:57.728763+00:00,Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?,5,cross_encoder,search,9332.2,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,0.4700234192037471
+2026-06-08T09:34:06.590229+00:00,Cai nghiện ma túy bắt buộc được quy định như thế nào?,5,cross_encoder,search,8398.31,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,0.3307377049180328
+2026-06-08T09:34:16.334483+00:00,Nghệ sĩ nào bị điều tra liên quan đến ma túy?,5,cross_encoder,search,9264.81,2024-chi-dan-an-tay-thanh-nien.md,0.5432010480265372
+2026-06-08T09:34:24.747887+00:00,Chi Dân liên quan đến vụ việc ma túy như thế nào?,5,cross_encoder,search,7939.74,2024-chi-dan-an-tay-thanh-nien.md,0.4932377049180328
+2026-06-08T09:34:33.674666+00:00,Danh mục chất ma túy và tiền chất được sửa đổi trong nghị định nào?,5,cross_encoder,search,8481.21,nghi-dinh-90-2024-sua-doi-danh-muc-chat-ma-tuy-tien-chat.md,0.5218366060169338
+2026-06-08T09:35:50.302221+00:00,Hình phạt cho tội tàng trữ trái phép chất ma túy là gì?,5,cross_encoder,search,27367.0,2023-le-hang-dantri.md,0.5554687500000001
+2026-06-08T09:35:58.212170+00:00,Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?,5,cross_encoder,search,7469.58,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,0.4700234192037471
+2026-06-08T09:36:06.408030+00:00,Cai nghiện ma túy bắt buộc được quy định như thế nào?,5,cross_encoder,search,7761.79,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,0.3307377049180328
+2026-06-08T09:36:14.720328+00:00,Nghệ sĩ nào bị điều tra liên quan đến ma túy?,5,cross_encoder,search,7900.9,2024-chi-dan-an-tay-thanh-nien.md,0.5432010480265372
+2026-06-08T09:36:23.025332+00:00,Chi Dân liên quan đến vụ việc ma túy như thế nào?,5,cross_encoder,search,7870.76,2024-chi-dan-an-tay-thanh-nien.md,0.4932377049180328
+2026-06-08T09:36:31.944718+00:00,Danh mục chất ma túy và tiền chất được sửa đổi trong nghị định nào?,5,cross_encoder,search,8489.48,nghi-dinh-90-2024-sua-doi-danh-muc-chat-ma-tuy-tien-chat.md,0.5218366060169338
+2026-06-08T09:36:43.857602+00:00,Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?,5,,generation_with_citation,11492.76,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,
