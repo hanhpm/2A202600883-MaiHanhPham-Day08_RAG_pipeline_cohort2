@@ -12,3 +12,13 @@ timestamp,query,top_k,rerank_method,mode,elapsed_ms,top_source,top_score
 2026-06-08T09:36:23.025332+00:00,Chi Dân liên quan đến vụ việc ma túy như thế nào?,5,cross_encoder,search,7870.76,2024-chi-dan-an-tay-thanh-nien.md,0.4932377049180328
 2026-06-08T09:36:31.944718+00:00,Danh mục chất ma túy và tiền chất được sửa đổi trong nghị định nào?,5,cross_encoder,search,8489.48,nghi-dinh-90-2024-sua-doi-danh-muc-chat-ma-tuy-tien-chat.md,0.5218366060169338
 2026-06-08T09:36:43.857602+00:00,Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?,5,,generation_with_citation,11492.76,nghi-dinh-116-2021-cai-nghien-ma-tuy.md,
+2026-06-08T16:53:46.416693+00:00,Luật ma túy có hình phạt bao nhiêu?,5,cross_encoder,search,34991.47,2018-chau-viet-cuong-chinhphu.md,0.1682377049180328
+2026-06-08T16:53:52.563333+00:00,Luật ma túy có hình phạt bao nhiêu?,5,cross_encoder,chat_rag,41141.1,2018-chau-viet-cuong-chinhphu.md,
+2026-06-08T16:54:11.311025+00:00,Luật ma túy có hình phạt là gì?,5,cross_encoder,search,32790.83,2018-chau-viet-cuong-chinhphu.md,0.08698770491803279
+2026-06-08T16:54:12.439540+00:00,Luật ma túy có hình phạt là gì?,5,cross_encoder,chat_rag,33922.56,2018-chau-viet-cuong-chinhphu.md,
+2026-06-08T16:55:42.298924+00:00,"Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?
+
+Ngữ cảnh hội thoại gần đây:
+user: Luật ma túy có hình phạt là gì?
+assistant: ma túy quy mô liên tỉnh, tạm giữ hình sự 5 nghi phạm"") [S1] ""Trần Hữu Tín"") [ ma túy ](https://thanhnien.vn/ma-tuy-tags486312.html ""ma túy"") [ tổ chức sử dụng trái phép ma túy ](https://thanhnien.vn/to-chuc-su-dung-trai-phep-ma-tuy-tags659593.html ""tổ chức sử dụng trái phép ma túy"") [S2] --- title: ",5,qwen_local,search,40582.77,2022-huu-tin-thanh-nien.md,2.375
+2026-06-08T16:55:43.750798+00:00,Luật Phòng chống ma túy 2021 quy định hành vi nào bị nghiêm cấm?,5,qwen_local,chat_rag,42034.01,2022-huu-tin-thanh-nien.md,

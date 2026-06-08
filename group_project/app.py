@@ -1,4 +1,4 @@
-"""Streamlit Search Engine for Group Option A."""
+"""Streamlit RAG chatbot UI inspired by ChatGPT and NotebookLM."""
 
 import sys
 from pathlib import Path
@@ -9,176 +9,355 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 if str(PROJECT_DIR) not in sys.path:
     sys.path.insert(0, str(PROJECT_DIR))
 
-from group_project.search_service import load_recent_logs, run_generation, run_search
+from group_project.document_store import ingest_upload, storage_status
+from group_project.search_service import load_recent_logs, run_chat_answer, run_search
 
 
-st.set_page_config(page_title="Drug Law Search", page_icon="Search", layout="wide")
+st.set_page_config(page_title="Drug Law RAG", layout="wide")
 
 st.markdown(
     """
     <style>
     :root { color-scheme: light; }
-    .stApp { background: #ffffff; color: #111111; }
-    [data-testid="stSidebar"] { background: #0f0f0f; color: #ffffff; }
-    [data-testid="stSidebar"] label,
+    .stApp {
+        background: #f7f7f4;
+        color: #1f1f1f;
+    }
+    .block-container {
+        max-width: 1480px;
+        padding-top: 1.1rem;
+        padding-bottom: 1.5rem;
+    }
+    [data-testid="stSidebar"] {
+        background: #f2f2ee;
+        border-right: 1px solid #dfdfd6;
+    }
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span { color: #ffffff; }
+    [data-testid="stSidebar"] span {
+        color: #202020;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div,
     [data-testid="stSidebar"] input,
-    [data-testid="stSidebar"] textarea,
-    [data-testid="stSidebar"] select,
-    [data-testid="stSidebar"] [role="combobox"],
-    [data-testid="stSidebar"] [data-baseweb="select"] *,
-    [data-testid="stSidebar"] [data-baseweb="popover"] * {
-        color: #111111 !important;
-    }
-    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+    [data-testid="stSidebar"] textarea {
         background: #ffffff !important;
-        border-color: #ffffff !important;
+        border-color: #d8d8cf !important;
+        color: #1f1f1f !important;
     }
-    .result-box {
-        border: 1px solid #111;
-        border-radius: 6px;
-        padding: 14px;
-        margin: 10px 0;
-        background: #fff;
+    [data-testid="stChatMessage"] {
+        background: transparent;
+        padding: 0.55rem 0;
     }
-    .score-pill {
+    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
+        line-height: 1.58;
+    }
+    div[data-testid="stChatInput"] {
+        border-top: 1px solid #deded6;
+        padding-top: 0.7rem;
+    }
+    .app-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 18px;
+        align-items: start;
+    }
+    .chat-surface {
+        background: #ffffff;
+        border: 1px solid #dfdfd6;
+        border-radius: 8px;
+        min-height: 74vh;
+        padding: 18px 24px 8px 24px;
+    }
+    .source-panel {
+        background: #ffffff;
+        border: 1px solid #dfdfd6;
+        border-radius: 8px;
+        min-height: 74vh;
+        padding: 16px;
+        position: sticky;
+        top: 1rem;
+    }
+    .brand-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #ecece5;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    .brand-title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin: 0;
+    }
+    .brand-subtitle {
+        color: #686861;
+        font-size: 13px;
+        margin: 2px 0 0 0;
+    }
+    .status-pill {
         display: inline-block;
-        border: 1px solid #111;
+        border: 1px solid #d2d2c8;
         border-radius: 999px;
-        padding: 2px 8px;
+        padding: 4px 9px;
         font-size: 12px;
-        margin-right: 6px;
+        color: #3b3b36;
+        background: #fbfbf8;
+        margin: 0 4px 6px 0;
+        white-space: nowrap;
     }
-    .small-muted { color: #555; font-size: 13px; }
-    .black-band {
-        background: #111;
-        color: white;
-        padding: 18px 20px;
-        border-radius: 6px;
-        margin-bottom: 18px;
+    .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 12px 0 4px 0;
     }
-    .black-band h1 { color: white; margin: 0; font-size: 28px; }
-    .black-band p { color: #ddd; margin: 6px 0 0 0; }
+    .quick-card {
+        border: 1px solid #e0e0d8;
+        border-radius: 8px;
+        padding: 10px 11px;
+        background: #fbfbf8;
+        color: #30302b;
+        min-height: 74px;
+        font-size: 13px;
+        line-height: 1.35;
+    }
+    .source-card {
+        border: 1px solid #e0e0d8;
+        border-radius: 8px;
+        padding: 11px 12px;
+        background: #fbfbf8;
+        margin: 9px 0;
+    }
+    .source-title {
+        font-weight: 650;
+        font-size: 13px;
+        margin-bottom: 5px;
+        overflow-wrap: anywhere;
+    }
+    .source-body {
+        color: #4b4b46;
+        font-size: 12.5px;
+        line-height: 1.45;
+    }
+    .muted {
+        color: #6f6f68;
+        font-size: 13px;
+    }
+    .section-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+    }
+    .empty-state {
+        border: 1px dashed #d6d6cc;
+        border-radius: 8px;
+        padding: 18px;
+        background: #fcfcfa;
+        color: #65655e;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+    @media (max-width: 1080px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .source-panel { position: static; min-height: auto; }
+        .quick-grid { grid-template-columns: 1fr; }
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-def render_result(item: dict, index: int) -> None:
+def render_source_card(item: dict, index: int, compact: bool = True) -> None:
     metadata = item.get("metadata", {})
     source = metadata.get("source", "unknown")
     doc_type = metadata.get("type", "unknown")
+    stage = item.get("retrieval_stage") or item.get("method") or item.get("source", "retrieval")
     score = float(item.get("score", 0.0))
     content = " ".join(item.get("content", "").split())
+    max_chars = 520 if compact else 900
     st.markdown(
         f"""
-        <div class="result-box">
-            <span class="score-pill">#{index}</span>
-            <span class="score-pill">score {score:.3f}</span>
-            <span class="score-pill">{doc_type}</span>
-            <div class="small-muted">source: {source}</div>
-            <p>{content[:900]}</p>
+        <div class="source-card">
+            <div class="source-title">S{index}. {source}</div>
+            <span class="status-pill">{doc_type}</span>
+            <span class="status-pill">{stage}</span>
+            <span class="status-pill">score {score:.3f}</span>
+            <div class="source-body">{content[:max_chars]}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-st.markdown(
-    """
-    <div class="black-band">
-        <h1>Drug Law & News Search Engine</h1>
-        <p>Hybrid search, reranking, source display, score comparison, and citation answer demo.</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "last_sources" not in st.session_state:
+    st.session_state.last_sources = []
+if "pending_prompt" not in st.session_state:
+    st.session_state.pending_prompt = ""
 
 with st.sidebar:
-    st.subheader("Controls")
+    st.markdown("### Library")
+    st.caption("Upload source documents, then embed them into the RAG store.")
+    uploaded_files = st.file_uploader(
+        "Add sources",
+        type=["txt", "md", "pdf", "docx", "csv", "json"],
+        accept_multiple_files=True,
+    )
+    doc_type = st.selectbox("Document type", ["legal", "news", "upload"], index=0)
+    if st.button("Embed sources", type="primary", use_container_width=True):
+        if not uploaded_files:
+            st.warning("Choose at least one file first.")
+        else:
+            for file in uploaded_files:
+                result = ingest_upload(file.name, file.getvalue(), doc_type=doc_type)
+                if result.get("ok"):
+                    st.success(
+                        f"{result['filename']}: {result['chunks']} chunks | "
+                        f"PG={result['postgres']['ok']} | ES={result['elasticsearch']['ok']}"
+                    )
+                else:
+                    st.error(result.get("message", "Upload failed."))
+
+    st.divider()
+    st.markdown("### Retrieval")
     top_k = st.slider("Top K", 3, 10, 5)
     rerank_method = st.selectbox(
         "Reranker",
         ["cross_encoder", "jina_api", "qwen_local", "mmr", "rrf"],
         index=0,
     )
-    run_citation = st.checkbox("Generate citation answer", value=True)
+    if st.button("New chat", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.last_sources = []
+        st.session_state.pending_prompt = ""
+        st.rerun()
 
-query = st.text_input(
-    "Search query",
-    value="Hình phạt cho tội tàng trữ trái phép chất ma túy là gì?",
-)
+    st.divider()
+    st.markdown("### Runtime")
+    status = storage_status()
+    pg_status = "online" if status["postgres_pgvector"]["ok"] else "offline"
+    es_status = "online" if status["elasticsearch"]["ok"] else "offline"
+    st.caption(f"Embedding: {status['embedding_model']}")
+    st.caption(f"PostgreSQL/pgvector: {pg_status}")
+    st.caption(f"Elasticsearch: {es_status}")
+    st.caption(f"Local upload chunks: {status['local_upload_chunks']}")
 
-submitted = st.button("Search", type="primary")
+st.markdown('<div class="app-shell">', unsafe_allow_html=True)
 
-if submitted and query.strip():
-    with st.spinner("Running hybrid search and reranking..."):
-        result = run_search(query.strip(), top_k=top_k, rerank_method=rerank_method)
+left, right = st.columns([0.68, 0.32], gap="large")
 
-    tab_results, tab_compare, tab_generation, tab_logs = st.tabs(
-        ["Reranked Results", "Comparison", "Generation Citation", "Logs"]
+with left:
+    st.markdown('<div class="chat-surface">', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="brand-row">
+            <div>
+                <p class="brand-title">Drug Law RAG</p>
+                <p class="brand-subtitle">Ask questions, keep follow-ups in context, and inspect citations.</p>
+            </div>
+            <div>
+                <span class="status-pill">chat</span>
+                <span class="status-pill">citations</span>
+                <span class="status-pill">hybrid retrieval</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    with tab_results:
-        st.subheader("Final reranked output")
-        st.caption(f"Elapsed: {result['elapsed_ms']} ms")
-        for i, item in enumerate(result["reranked"], 1):
-            render_result(item, i)
-
-    with tab_compare:
-        st.subheader("Retrieval comparison")
-        comparison = result["comparison"]
-        st.info(comparison["summary"])
-        st.dataframe(
-            [
-                {"stage": stage, **values}
-                for stage, values in comparison["stages"].items()
-            ],
-            use_container_width=True,
+    if not st.session_state.messages:
+        st.markdown(
+            """
+            <div class="empty-state">
+                Start with a legal question or upload your own source files from the Library.
+                Answers are grounded in retrieved context and linked to source cards on the right.
+            </div>
+            <div class="quick-grid">
+                <div class="quick-card">Dieu 249 Bo luat Hinh su quy dinh gi ve tang tru trai phep chat ma tuy?</div>
+                <div class="quick-card">Luat Phong chong ma tuy 2021 cam nhung hanh vi nao?</div>
+                <div class="quick-card">Cai nghien ma tuy bat buoc duoc quy dinh nhu the nao?</div>
+                <div class="quick-card">So sanh thong tin ve vu viec Chi Dan trong cac bai bao.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown("**Semantic top results**")
-            for i, item in enumerate(result["semantic"][:3], 1):
-                render_result(item, i)
-        with col2:
-            st.markdown("**BM25 top results**")
-            for i, item in enumerate(result["lexical"][:3], 1):
-                render_result(item, i)
-        with col3:
-            st.markdown("**Hybrid RRF top results**")
-            for i, item in enumerate(result["hybrid"][:3], 1):
-                render_result(item, i)
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    with tab_generation:
-        if run_citation:
-            with st.spinner("Generating answer with citation..."):
-                answer = run_generation(query.strip(), top_k=top_k)
-            st.subheader("Answer with citation")
-            st.write(answer.get("answer", ""))
-            st.caption(f"Retrieval source: {answer.get('retrieval_source')} | elapsed: {answer.get('elapsed_ms')} ms")
-            st.markdown("**Sources used**")
-            for i, item in enumerate(answer.get("sources", []), 1):
-                render_result(item, i)
-        else:
-            st.write("Citation generation is disabled in the sidebar.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with tab_logs:
-        st.subheader("Recent input logs")
+    prompt = st.chat_input("Ask about drug law, decrees, cases, or uploaded documents...")
+    active_prompt = prompt or st.session_state.pending_prompt
+    if active_prompt:
+        st.session_state.pending_prompt = ""
+        st.session_state.messages.append({"role": "user", "content": active_prompt})
+        with st.chat_message("user"):
+            st.markdown(active_prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Retrieving evidence and drafting a cited answer..."):
+                result = run_chat_answer(
+                    active_prompt,
+                    history=st.session_state.messages[:-1],
+                    top_k=top_k,
+                    rerank_method=rerank_method,
+                )
+            st.markdown(result["answer"])
+            st.caption(f"Retrieval query: {result['standalone_query'][:220]}")
+            st.caption(f"Elapsed: {result['elapsed_ms']} ms")
+
+        st.session_state.messages.append({"role": "assistant", "content": result["answer"]})
+        st.session_state.last_sources = result.get("sources", [])
+        st.rerun()
+
+with right:
+    st.markdown('<div class="source-panel">', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">Sources</p>', unsafe_allow_html=True)
+    if st.session_state.last_sources:
+        for i, item in enumerate(st.session_state.last_sources, 1):
+            render_source_card(item, i, compact=True)
+    else:
+        st.markdown(
+            """
+            <div class="empty-state">
+                Source cards will appear here after the first answer. Use them to verify citations and inspect retrieved chunks.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("Retrieval comparison", expanded=False):
+        query = st.text_input(
+            "Compare query",
+            value="Dieu 249 Bo luat Hinh su quy dinh gi ve tang tru ma tuy?",
+        )
+        if st.button("Run comparison", use_container_width=True):
+            with st.spinner("Running semantic, BM25, uploaded-doc retrieval, and rerank..."):
+                comparison_result = run_search(query, top_k=top_k, rerank_method=rerank_method)
+            st.info(comparison_result["comparison"]["summary"])
+            st.dataframe(
+                [
+                    {"stage": stage, **values}
+                    for stage, values in comparison_result["comparison"]["stages"].items()
+                ],
+                use_container_width=True,
+            )
+            st.markdown("**Top reranked sources**")
+            for i, item in enumerate(comparison_result["reranked"][:3], 1):
+                render_source_card(item, i, compact=True)
+
+    with st.expander("Recent logs", expanded=False):
         st.dataframe(load_recent_logs(20), use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-else:
-    st.caption("Enter a query and press Search.")
-    st.markdown("Example queries:")
-    st.code(
-        "Điều 249 Bộ luật Hình sự quy định gì về tàng trữ ma túy?\n"
-        "Nghệ sĩ nào bị điều tra liên quan ma túy?\n"
-        "Luật Phòng chống ma túy 2021 quy định gì về cai nghiện?",
-        language="text",
-    )
+st.markdown("</div>", unsafe_allow_html=True)

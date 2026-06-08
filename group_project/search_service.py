@@ -14,6 +14,7 @@ from src.task5_semantic_search import semantic_search
 from src.task6_lexical_search import lexical_search
 from src.task7_reranking import rerank, rerank_rrf
 from src.task10_generation import generate_with_citation
+from group_project.document_store import search_uploaded_documents
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 GROUP_DIR = PROJECT_DIR / "group_project"
@@ -26,8 +27,15 @@ def run_search(query: str, top_k: int = 5, rerank_method: str = "cross_encoder")
     """Run semantic, lexical, hybrid fusion and reranking for comparison."""
     started = time.perf_counter()
     semantic = semantic_search(query, top_k=top_k * 2)
-    lexical = lexical_search(query, top_k=top_k * 2, method="bm25")
-    hybrid = rerank_rrf([semantic, lexical], top_k=top_k * 2)
+    try:
+        lexical = lexical_search(query, top_k=top_k * 2, method="elasticsearch")
+    except Exception:
+        lexical = lexical_search(query, top_k=top_k * 2, method="bm25")
+        for item in lexical:
+            item["method"] = "local_bm25"
+
+    uploaded = search_uploaded_documents(query, top_k=top_k * 2)
+    hybrid = rerank_rrf([semantic, lexical, uploaded], top_k=top_k * 3)
     reranked = rerank(query, hybrid, top_k=top_k, method=rerank_method)
 
     for item in semantic:
@@ -47,6 +55,7 @@ def run_search(query: str, top_k: int = 5, rerank_method: str = "cross_encoder")
         "rerank_method": rerank_method,
         "semantic": semantic[:top_k],
         "lexical": lexical[:top_k],
+        "uploaded": uploaded[:top_k],
         "hybrid": hybrid[:top_k],
         "reranked": reranked,
         "comparison": comparison,
@@ -70,6 +79,39 @@ def run_generation(query: str, top_k: int = 5) -> dict:
         "elapsed_ms": result["elapsed_ms"],
     })
     return result
+
+
+def run_chat_answer(
+    query: str,
+    history: list[dict] | None = None,
+    top_k: int = 5,
+    rerank_method: str = "cross_encoder",
+) -> dict:
+    """Answer a chat turn with conversation memory and explicit citations."""
+    started = time.perf_counter()
+    history = history or []
+    standalone_query = rewrite_follow_up(query, history)
+    retrieval = run_search(standalone_query, top_k=top_k, rerank_method=rerank_method)
+    sources = retrieval.get("reranked", [])[:top_k]
+    answer = generate_answer_from_sources(query, standalone_query, history, sources)
+    payload = {
+        "query": query,
+        "standalone_query": standalone_query,
+        "answer": answer,
+        "sources": sources,
+        "retrieval": retrieval,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+    }
+    write_log({
+        "query": query,
+        "top_k": top_k,
+        "rerank_method": rerank_method,
+        "mode": "chat_rag",
+        "answer_preview": answer[:500],
+        "sources": _source_names(sources),
+        "elapsed_ms": payload["elapsed_ms"],
+    })
+    return payload
 
 
 def explain_comparison(query: str, semantic: list[dict], lexical: list[dict], hybrid: list[dict], reranked: list[dict]) -> dict:
@@ -102,6 +144,92 @@ def explain_comparison(query: str, semantic: list[dict], lexical: list[dict], hy
             "Semantic helps paraphrases, BM25 helps exact legal terms, hybrid+rerank balances both."
         ),
     }
+
+
+def rewrite_follow_up(query: str, history: list[dict]) -> str:
+    """Make short follow-up questions searchable using the latest chat context."""
+    if not history:
+        return query
+    recent = []
+    for message in history[-4:]:
+        role = message.get("role", "user")
+        content = " ".join(str(message.get("content", "")).split())
+        if content:
+            recent.append(f"{role}: {content[:300]}")
+    if not recent:
+        return query
+    return f"{query}\n\nNgữ cảnh hội thoại gần đây:\n" + "\n".join(recent)
+
+
+def generate_answer_from_sources(
+    query: str,
+    standalone_query: str,
+    history: list[dict],
+    sources: list[dict],
+) -> str:
+    """Generate a grounded Vietnamese answer with citations."""
+    if not sources:
+        return "Mình chưa tìm thấy nguồn đủ rõ để xác minh câu trả lời."
+
+    context = _format_context_for_chat(sources)
+    api_key = __import__("os").getenv("OPENAI_API_KEY", "").strip()
+    if api_key:
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key)
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "Bạn là chatbot RAG trả lời bằng tiếng Việt về pháp luật ma túy "
+                        "và tin tức liên quan. Chỉ dùng context được cung cấp. Mỗi ý quan "
+                        "trọng phải có citation dạng [S1], [S2]. Nếu context không đủ, nói rõ "
+                        "chưa thể xác minh."
+                    ),
+                }
+            ]
+            for item in history[-6:]:
+                if item.get("role") in {"user", "assistant"} and item.get("content"):
+                    messages.append({"role": item["role"], "content": str(item["content"])[:1200]})
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"Câu hỏi hiện tại: {query}\n"
+                    f"Câu hỏi đã mở rộng để retrieval: {standalone_query}\n\n"
+                    f"Context:\n{context}"
+                ),
+            })
+            response = client.chat.completions.create(
+                model=__import__("os").getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                messages=messages,
+                temperature=0.2,
+                top_p=0.9,
+            )
+            return response.choices[0].message.content or ""
+        except Exception:
+            pass
+
+    parts = []
+    for i, source in enumerate(sources[:3], 1):
+        text = " ".join(source.get("content", "").split())[:360].rstrip()
+        if text:
+            parts.append(f"{text} [S{i}]")
+    return "\n\n".join(parts) if parts else "Mình chưa tìm thấy nguồn đủ rõ để xác minh câu trả lời."
+
+
+def _format_context_for_chat(sources: list[dict]) -> str:
+    blocks = []
+    for i, item in enumerate(sources, 1):
+        metadata = item.get("metadata", {})
+        source = metadata.get("source", "unknown")
+        doc_type = metadata.get("type", "unknown")
+        score = float(item.get("score", 0.0))
+        blocks.append(
+            f"[S{i}] Source: {source} | Type: {doc_type} | Score: {score:.3f}\n"
+            f"{item.get('content', '')}"
+        )
+    return "\n\n---\n\n".join(blocks)
 
 
 def write_log(payload: dict) -> None:
