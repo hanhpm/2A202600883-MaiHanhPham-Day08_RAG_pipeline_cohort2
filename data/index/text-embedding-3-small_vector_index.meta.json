@@ -1,5 +1,0 @@
-{
-  "embedding_model": "text-embedding-3-small",
-  "embedding_dim": 1536,
-  "vector_store": "local_json"
-}
